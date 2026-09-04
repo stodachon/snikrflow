@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snikrflow"
+version = "0.1.0"
+description = "Native binary security triage and reachability platform, built on angr and Claripy."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Stodachon" }
+]
+keywords = [
+    "security", "reverse-engineering", "android", "jni", "binary-analysis",
+    "angr", "symbolic-execution", "triage", "reachability", "elf",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Disassemblers",
+]
+dependencies = [
+    "angr",
+    "claripy",
+    "pyelftools",
+    "typer[all]",
+    "rich",
+    "networkx",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/stodachon/snikrflow"
+Repository = "https://github.com/stodachon/snikrflow"
+Issues = "https://github.com/stodachon/snikrflow/issues"
+
+[project.scripts]
+snikrflow = "snikrflow.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["snikrflow*"]

@@ -1,0 +1,6 @@
+angr>=9.2.100
+claripy
+pyelftools
+typer[all]
+rich
+pytest
