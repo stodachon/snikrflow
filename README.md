@@ -177,7 +177,7 @@ you own or have explicit permission to analyze.
 - [x] M5 -- Symbolic execution (`solve`)
 - [x] M6 -- Data flow (`dataflow`)
 - [x] M7 -- Audit engine (`audit`)
-- [ ] M8 -- Android APK support (`audit app.apk`)
+- [x] M8 -- Android APK support (`audit app.apk`)
 - [ ] M9 -- Advanced analysis (better taint tracking, caching, SARIF)
 - [ ] M10 -- GUI (presentation layer over the same engine, no duplicated logic)
 
