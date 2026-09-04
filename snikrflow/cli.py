@@ -37,9 +37,10 @@ def _print_banner() -> None:
     _stderr_console.print(f"[bold orange3]{_BANNER_ART}[/bold orange3]")
     _stderr_console.print(
         f"[dim]  Native binary security triage & reachability platform  "
-        f"v{SNIKRFLOW_VERSION}[/dim]\n"
+        f"v{SNIKRFLOW_VERSION}\n"
+        f"[dim]  Made with 💖 by John Ebinyi Odey of Stodachon[/dim]\n"
     )
-
+    
 from snikrflow.analysis.interfaces.apk_audit import audit_apk
 from snikrflow.analysis.interfaces.audit import run_audit
 from snikrflow.analysis.interfaces.callgraph import find_callees, find_callers
