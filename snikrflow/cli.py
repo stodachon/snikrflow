@@ -36,7 +36,7 @@ _stderr_console = Console(stderr=True)
 def _print_banner() -> None:
     _stderr_console.print(f"[bold orange3]{_BANNER_ART}[/bold orange3]")
     _stderr_console.print(
-        f"[dim]  native binary security triage & reachability platform  "
+        f"[dim]  Native binary security triage & reachability platform  "
         f"v{SNIKRFLOW_VERSION}[/dim]\n"
     )
 
@@ -80,8 +80,19 @@ app = typer.Typer(
 console = Console()
 
 
+def _version_callback(value: bool):
+    if value:
+        console.print(f"SnikrFlow v{SNIKRFLOW_VERSION}")
+        raise typer.Exit()
+
+
 @app.callback()
-def main():
+def main(
+    version: bool = typer.Option(
+        False, "--version", callback=_version_callback, is_eager=True,
+        help="Show SnikrFlow's version and exit.",
+    ),
+):
     """SnikrFlow -- native binary security triage and reachability platform."""
     _print_banner()
 

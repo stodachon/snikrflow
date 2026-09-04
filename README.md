@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" width="140" alt="SnikrFlow logo"/>
+  <img src="https://raw.githubusercontent.com/Stodachon/snikrflow/main/logo.svg" width="140" alt="SnikrFlow logo"/>
 </p>
 
 <h1 align="center">SnikrFlow</h1>

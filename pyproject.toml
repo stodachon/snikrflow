@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snikrflow"
-version = "0.1.0"
+version = "0.1.1"
 description = "Native binary security triage and reachability platform, built on angr and Claripy."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -40,9 +40,9 @@ dependencies = [
 dev = ["pytest"]
 
 [project.urls]
-Homepage = "https://github.com/stodachon/snikrflow"
-Repository = "https://github.com/stodachon/snikrflow"
-Issues = "https://github.com/stodachon/snikrflow/issues"
+Homepage = "https://github.com/YOUR_USERNAME/snikrflow"
+Repository = "https://github.com/YOUR_USERNAME/snikrflow"
+Issues = "https://github.com/YOUR_USERNAME/snikrflow/issues"
 
 [project.scripts]
 snikrflow = "snikrflow.cli:app"
