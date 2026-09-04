@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnikrFlow — native binary security triage</title>
+<meta name="description" content="Native binary security triage and reachability platform. Stop guessing where to start reversing a binary.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #121110;
+    --panel: #1c1a17;
+    --border: #322e28;
+    --accent: #FF7A29;
+    --accent-deep: #D2691E;
+    --text: #F2EDE6;
+    --muted: #8A8377;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Nav */
+  nav {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 0;
+  }
+  nav .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text);
+  }
+  .brand svg { width: 26px; height: 26px; flex-shrink: 0; }
+  .navlinks { display: flex; gap: 22px; font-size: 14px; }
+  .navlinks a { color: var(--muted); }
+  .navlinks a:hover { color: var(--accent); }
+
+  /* Hero */
+  header.hero { padding: 64px 0 40px; }
+  h1.headline {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.25;
+    margin: 0 0 20px;
+    max-width: 15ch;
+  }
+  p.sub {
+    color: var(--muted);
+    font-size: 17px;
+    max-width: 54ch;
+    margin: 0 0 32px;
+  }
+  p.sub code {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    background: var(--panel);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 15px;
+  }
+
+  .install-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    max-width: fit-content;
+    margin-bottom: 40px;
+  }
+  .install-row span { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  .install-row .prompt { color: var(--accent); }
+  .install-row button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  .install-row button:hover { color: var(--text); border-color: var(--accent); }
+
+  /* Terminal */
+  .terminal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px -30px rgba(0,0,0,0.6);
+  }
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #5a4f45; }
+  .dot.y { background: #6b5c48; }
+  .dot.g { background: #4d5240; }
+  .terminal-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .terminal-body {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    padding: 18px 20px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .terminal-body .prompt { color: var(--accent); }
+  .terminal-body .dim { color: var(--muted); }
+  .terminal-body .head { color: var(--accent); font-weight: 700; }
+  .terminal-body .medium { color: #d4a24a; font-weight: 700; }
+  .terminal-body .cursor {
+    display: inline-block;
+    width: 7px; height: 14px;
+    background: var(--accent);
+    vertical-align: text-bottom;
+    animation: blink 1s step-end infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .terminal-body .cursor { animation: none; }
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Sections */
+  section { padding: 56px 0; border-top: 1px solid var(--border); }
+  h2.sec-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+  p.sec-desc { color: var(--muted); margin: 0 0 32px; max-width: 58ch; }
+
+  ol.pipeline { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+  ol.pipeline li {
+    counter-increment: step;
+    display: flex;
+    gap: 18px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  ol.pipeline li:last-child { border-bottom: none; }
+  ol.pipeline li::before {
+    content: counter(step);
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 13px;
+    width: 20px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  ol.pipeline .cmd {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 15px;
+    min-width: 130px;
+    flex-shrink: 0;
+  }
+  ol.pipeline .desc { color: var(--muted); font-size: 14.5px; }
+
+  table.terms {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  table.terms th, table.terms td {
+    text-align: left;
+    padding: 12px 14px 12px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.terms th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  table.terms code {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 13.5px;
+  }
+
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .btn:hover { text-decoration: none; border-color: var(--accent); }
+  .btn.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color: #16130f;
+    font-weight: 700;
+    border: none;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0 48px;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (max-width: 560px) {
+    .navlinks { gap: 14px; font-size: 13px; }
+    header.hero { padding: 44px 0 32px; }
+    .terminal-body { font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="120,14 210,64 210,176 120,226 30,176 30,64" fill="#1c1a17" stroke="#FF7A29" stroke-width="8"/>
+        <path d="M62,168 L96,120 L120,150 L162,76" fill="none" stroke="#FF7A29" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="62" cy="168" r="9" fill="#1c1a17" stroke="#FFA85C" stroke-width="6"/>
+        <circle cx="96" cy="120" r="6" fill="#D2691E"/>
+        <circle cx="120" cy="150" r="6" fill="#D2691E"/>
+        <circle cx="162" cy="76" r="10" fill="#1c1a17" stroke="#FF7A29" stroke-width="6"/>
+      </svg>
+      SnikrFlow
+    </div>
+    <div class="navlinks">
+      <a href="https://github.com/Stodachon/snikrflow">GitHub</a>
+      <a href="https://pypi.org/project/snikrflow/">PyPI</a>
+      <a href="https://github.com/Stodachon/snikrflow#readme">Docs</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <h1 class="headline">Stop guessing where to start reversing a binary.</h1>
+    <p class="sub">
+      Native binary security triage and reachability platform, built on
+      <code>angr</code> + <code>Claripy</code>. Point it at an ELF or an
+      Android APK — it tells you which functions actually deserve your
+      attention, before you spend two hours finding out yourself.
+    </p>
+
+    <div class="install-row">
+      <span><span class="prompt">$</span> pip install snikrflow</span>
+      <button onclick="navigator.clipboard.writeText('pip install snikrflow'); this.textContent='copied'; setTimeout(()=>this.textContent='copy', 1200)">copy</button>
+    </div>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="terminal-title">snikrflow audit libfoo.so</span>
+      </div>
+      <div class="terminal-body">SnikrFlow Security Audit
+════════════════════════════
+Binary
+  Architecture: arm64
+  Type:         Shared Object
+Functions
+  159 discovered
+  3 JNI candidates
+Security-sensitive operations
+  3 identified
+Interesting paths
+  1 statically reachable
+  1 selected for data-flow analysis
+Findings
+
+  <span class="medium">[MEDIUM]</span> JNI -&gt; memory
+    Source:     Java_sg_vantagepoint_uncrackable3_MainActivity_init @ 0x403310
+    Sink:       strncpy @ 0x400d70  (memory)
+    Status:     statically_reachable
+    Confidence: inconclusive
+
+<span class="dim">Risk levels are a prioritization aid, not confirmed vulnerabilities.</span><span class="cursor"></span></div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2 class="sec-title">The pipeline</h2>
+    <p class="sec-desc">Every command feeds the next. Run them individually while you explore, or let <code class="mono">audit</code> orchestrate the whole thing.</p>
+    <ol class="pipeline">
+      <li><span class="cmd">info</span><span class="desc">ELF metadata — architecture, entry point, sections, symbols</span></li>
+      <li><span class="cmd">functions</span><span class="desc">Function discovery via angr's CFGFast, cross-referenced with the symbol table</span></li>
+      <li><span class="cmd">jni</span><span class="desc">Statically-exported JNI entry points, with best-effort Java class/method demangling</span></li>
+      <li><span class="cmd">sinks</span><span class="desc">Security-sensitive calls — memory, process execution, filesystem, networking, dynamic loading</span></li>
+      <li><span class="cmd">cfg / callers / callees</span><span class="desc">Control-flow graph summary and call-graph queries on any address</span></li>
+      <li><span class="cmd">reach</span><span class="desc">Static call-graph reachability between a source and a sink</span></li>
+      <li><span class="cmd">solve</span><span class="desc">Symbolic execution — a concrete candidate input that walks a given path</span></li>
+      <li><span class="cmd">dataflow</span><span class="desc">Does the source's data actually reach the sink's argument, not just control flow</span></li>
+      <li><span class="cmd">audit</span><span class="desc">Orchestrates everything above into ranked, risk-scored findings — accepts .so or .apk directly</span></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 class="sec-title">Read results carefully</h2>
+    <p class="sec-desc">SnikrFlow is deliberate about what different results mean. These are never used interchangeably.</p>
+    <table class="terms">
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td><code>statically_reachable</code></td><td>A direct call-graph path exists. Doesn't see indirect calls (function pointers, vtables).</td></tr>
+      <tr><td><code>SAT</code> (solve)</td><td>A concrete candidate input exists that walks this exact path. Not a confirmed exploit.</td></tr>
+      <tr><td><code>POSSIBLE</code> (dataflow)</td><td>Symbolic input appears to reach the sink's argument. Heuristic, not sound taint analysis.</td></tr>
+      <tr><td>Risk level (audit)</td><td>A prioritization signal. Never a confirmed vulnerability.</td></tr>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 class="sec-title">Get it</h2>
+    <p class="sec-desc">MIT licensed. Contributions welcome — see CONTRIBUTING.md in the repo.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="https://pypi.org/project/snikrflow/">View on PyPI</a>
+      <a class="btn" href="https://github.com/Stodachon/snikrflow">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>MIT License</span>
+    <span>Built by John Ebinyi Odey at Stodachon</span>
+  </div>
+</footer>
+
+</body>
+</html>
