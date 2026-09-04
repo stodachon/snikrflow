@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Stodachon" }
+    { name = "John Ebinyi Odey" },
 ]
 keywords = [
     "security", "reverse-engineering", "android", "jni", "binary-analysis",

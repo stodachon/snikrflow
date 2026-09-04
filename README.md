@@ -15,6 +15,10 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue.svg">
 </p>
 
+<p align="center">
+  Built by <b>John Ebinyi Odey</b> at <b>Stodachon</b>
+</p>
+
 ---
 
 ## The problem

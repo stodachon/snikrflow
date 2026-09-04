@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Usage question
+    url: https://github.com/Stodachon/snikrflow/discussions
+    about: For "how do I..." questions, please use Discussions instead of an issue.
