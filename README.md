@@ -97,7 +97,7 @@ Here's SnikrFlow in action — from installation to native binary analysis.
 
 ### Installation
 
-![SnikrFlow installation](https://raw.githubusercontent.com/Stodachon/snikrflow/main/public/demos/snikrflow-install.gif)
+![SnikrFlow installation](https://raw.githubusercontent.com/Stodachon/snikrflow/main/snikrflow/demos/snikrflow-install.gif)
 
 ### Interactive terminal demo
 
