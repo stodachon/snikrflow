@@ -91,6 +91,21 @@ snikrflow dataflow libfoo.so --source 0x403a00 --sink 0x400d80  # does tainted d
 
 Every command supports `--json` for scripting/piping into other tools.
 
+## Demo
+
+Here's SnikrFlow in action — from installation to native binary analysis.
+
+### Installation
+
+![SnikrFlow installation](https://raw.githubusercontent.com/Stodachon/snikrflow/main/public/demos/snikrflow-install.gif)
+
+### Interactive terminal demo
+
+Explore SnikrFlow's analysis workflow, including reachability, CFG analysis,
+callers, callees, and other security triage commands.
+
+**[▶ Watch the full interactive Asciinema demo](https://asciinema.org/a/n83kUR2CpK8abgDa)**
+
 ## What `audit` actually does
 
 `audit` is the flagship command -- it runs the full pipeline automatically:
