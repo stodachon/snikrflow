@@ -203,4 +203,4 @@ Built on [angr](https://angr.io) and Claripy. CLI powered by
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+SnikrFlow is licensed under the **GNU General Public License v3.0** — see [LICENSE](./LICENSE) for the full text.
