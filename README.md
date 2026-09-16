@@ -183,19 +183,6 @@ these are never used interchangeably:
 SnikrFlow is for authorized security research only -- use it against binaries
 you own or have explicit permission to analyze.
 
-## Roadmap
-
-- [x] M1 -- ELF foundation (`info`, `functions`)
-- [x] M2 -- Security triage (`jni`, `sinks`)
-- [x] M3 -- Program structure (`cfg`, `callers`, `callees`)
-- [x] M4 -- Reachability (`reach`)
-- [x] M5 -- Symbolic execution (`solve`)
-- [x] M6 -- Data flow (`dataflow`)
-- [x] M7 -- Audit engine (`audit`)
-- [x] M8 -- Android APK support (`audit app.apk`)
-- [ ] M9 -- Advanced analysis (better taint tracking, caching, SARIF)
-- [ ] M10 -- GUI (presentation layer over the same engine, no duplicated logic)
-
 ## Credits
 
 Built on [angr](https://angr.io) and Claripy. CLI powered by
