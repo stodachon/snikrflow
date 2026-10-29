@@ -28,7 +28,9 @@ classifiers = [
     "Topic :: Software Development :: Disassemblers",
 ]
 dependencies = [
-    "angr>=9.2.100",
+    "angr>=9.2.100,<10",
+    "bitstring>=4,<5",
+    "pycparser>=3.0,<3.11",
     "pyelftools",
     "typer",
     "rich",
