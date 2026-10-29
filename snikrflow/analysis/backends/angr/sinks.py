@@ -47,7 +47,12 @@ def discover_sinks(binary: LoadedBinary) -> list[SecuritySink]:
 
         for caller_addr in caller_addrs:
             caller_func = by_addr.get(caller_addr)
-            caller_name = caller_func.name if caller_func else f"sub_{caller_addr:x}"
+            if caller_func is None:
+                # Not a function SnikrFlow reports (e.g. a PLT padding
+                # artifact filtered out in discover_functions) -- so not a
+                # real caller either. Don't invent a name for it.
+                continue
+            caller_name = caller_func.name
 
             call_site_addrs: list[int] = []
             try:
@@ -57,7 +62,7 @@ def discover_sinks(binary: LoadedBinary) -> list[SecuritySink]:
                         target = kb_caller.get_call_target(site)
                         if target == f.address:
                             call_site_addrs.append(site)
-            except Exception:  # noqa: BLE001, S110
+            except Exception:
                 pass
 
             sink.call_sites.append(

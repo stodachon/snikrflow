@@ -19,7 +19,13 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-import claripy
+# angr >= 10 bundles its own claripy (angr.claripy); its states only accept
+# expressions built by THAT module, not by a separately installed `claripy`
+# package. angr 9.x uses the standalone package. Use whichever angr uses.
+try:
+    from angr import claripy
+except ImportError:  # angr 9.x
+    import claripy
 
 from snikrflow.analysis.backends.angr.symbolic import (
     DEFAULT_INPUT_SIZE,
@@ -66,10 +72,16 @@ def check_data_flow(
         ) from e
 
     simgr = project.factory.simgr(state)
+    # Create the result stashes up front: if exploration stops before its first
+    # successful step (timeout, or an unsupported instruction raising on step one)
+    # they'd otherwise not exist yet, and reading simgr.found would crash.
+    simgr.populate("found", [])
+    simgr.populate("avoided", [])
 
     start_time = time.time()
     steps_taken = 0
     stop_reason = "unknown"
+    pruned = False  # True once states were dropped to respect max_active_states
 
     while simgr.active:
         if time.time() - start_time > timeout_seconds:
@@ -102,13 +114,17 @@ def check_data_flow(
             break
 
         if len(simgr.active) > max_active_states:
-            simgr.active = simgr.active[:max_active_states]
+            # Assigning simgr.active would only shadow the stash with a plain
+            # attribute (angr keeps stepping every real state) -- trim the
+            # stash itself.
+            simgr.stashes["active"] = simgr.stashes["active"][:max_active_states]
+            pruned = True
 
     if stop_reason == "unknown":
         if simgr.found:
             stop_reason = "sink_reached"
         elif not simgr.active:
-            stop_reason = "no_active_states"
+            stop_reason = "state_limit_reached" if pruned else "no_active_states"
 
     if not simgr.found:
         return DataFlowResult(

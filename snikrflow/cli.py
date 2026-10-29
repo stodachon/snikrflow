@@ -573,7 +573,7 @@ def audit(
                     if lib.audit is not None
                 ]
                 write_sarif(entries, sarif)
-                console.print(f"[dim]SARIF written to {sarif}[/dim]")
+                _stderr_console.print(f"[dim]SARIF written to {sarif}[/dim]")
             return
 
         loaded = load_binary(binary)
@@ -589,7 +589,7 @@ def audit(
 
     if sarif:
         write_sarif([(result, binary)], sarif)
-        console.print(f"[dim]SARIF written to {sarif}[/dim]")
+        _stderr_console.print(f"[dim]SARIF written to {sarif}[/dim]")
 
 
 @app.command()

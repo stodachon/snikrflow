@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-_ESCAPED_UNDERSCORE_MARKER = "\x00ESC_USCORE\x00"
+_ESCAPED_UNDERSCORE_MARKER = "\x00ESCUSCORE\x00"
 
 
 def demangle_jni_name(name: str) -> tuple[Optional[str], Optional[str]]:

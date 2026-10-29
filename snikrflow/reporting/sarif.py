@@ -73,7 +73,7 @@ def build_sarif_document(entries: list[tuple[AuditResult, Path]]) -> dict:
                     "locations": [
                         {
                             "physicalLocation": {
-                                "artifactLocation": {"uri": str(binary_label)}
+                                "artifactLocation": {"uri": str(binary_label).replace("\\", "/")}
                             },
                             "logicalLocations": [
                                 {

@@ -17,6 +17,8 @@ from snikrflow.core.exceptions import AnalysisIncompleteError
 from snikrflow.core.models import Function, FunctionSource
 from snikrflow.elf.loader import LoadedBinary
 
+_PLT_SECTIONS = (".plt", ".plt.sec", ".plt.got")
+
 _JNI_PREFIXES = ("Java_",)
 _JNI_EXACT = ("JNI_OnLoad", "JNI_OnUnload")
 
@@ -27,6 +29,11 @@ def _looks_like_jni(name: str) -> bool:
     if name in _JNI_EXACT:
         return True
     return name.startswith(_JNI_PREFIXES)
+
+
+def _in_plt_section(main_obj, addr: int) -> bool:
+    section = main_obj.find_section_containing(addr)
+    return section is not None and section.name in _PLT_SECTIONS
 
 
 def discover_functions(binary: LoadedBinary) -> list[Function]:
@@ -70,6 +77,15 @@ def discover_functions(binary: LoadedBinary) -> list[Function]:
         has_symbol = sym is not None
         is_imported = bool(sym.is_import) if sym else is_simprocedure
         is_exported = bool(getattr(sym, "is_export", False)) if sym else False
+
+        # PLT0 and its alignment padding get discovered by angr as nameless
+        # "functions" inside the PLT. They aren't code the program authored,
+        # and they show up as phantom callers (with no call site) of the
+        # first real PLT stub -- i.e. a bogus extra caller on whichever sink
+        # happens to be the first import. Real stubs are is_plt, so only
+        # drop unnamed, non-stub entries sitting inside a PLT section.
+        if not is_plt and not has_symbol and not is_simprocedure and _in_plt_section(main_obj, addr):
+            continue
 
         if is_plt:
             source = FunctionSource.PLT_STUB

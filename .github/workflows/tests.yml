@@ -1,0 +1,61 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: py${{ matrix.python-version }} / ${{ matrix.os }} / ${{ matrix.angr-spec }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+        angr-spec: ["angr"]            # whatever pip resolves today (currently angr 10.x)
+        include:
+          # angr 9.x is what many existing installs still run; angr 10 bundles
+          # its own claripy and behaves differently, so cover both.
+          - os: ubuntu-latest
+            python-version: "3.12"
+            angr-spec: "angr<10"
+          # SnikrFlow is developed on Windows; keep it honest.
+          - os: windows-latest
+            python-version: "3.12"
+            angr-spec: "angr"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" "${{ matrix.angr-spec }}"
+
+      - name: Show resolved versions
+        run: python -c "import angr, sys; print('python', sys.version.split()[0], '| angr', angr.__version__)"
+
+      - name: Run tests
+        run: pytest -q
+
+  package:
+    name: build + twine check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+      - run: python -m build
+      - name: Validate package metadata and README rendering
+        run: twine check dist/*

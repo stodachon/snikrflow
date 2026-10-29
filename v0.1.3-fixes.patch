@@ -1,0 +1,237 @@
+diff -ruN --strip-trailing-cr a/snikrflow/analysis/backends/angr/dataflow.py b/snikrflow/analysis/backends/angr/dataflow.py
+--- a/snikrflow/analysis/backends/angr/dataflow.py	2026-10-11 06:11:44.803739611 +0000
++++ b/snikrflow/analysis/backends/angr/dataflow.py	2026-10-11 06:11:44.794020730 +0000
+@@ -19,7 +19,13 @@
+ import time
+ from typing import Optional
+ 
+-import claripy
++# angr >= 10 bundles its own claripy (angr.claripy); its states only accept
++# expressions built by THAT module, not by a separately installed `claripy`
++# package. angr 9.x uses the standalone package. Use whichever angr uses.
++try:
++    from angr import claripy
++except ImportError:  # angr 9.x
++    import claripy
+ 
+ from snikrflow.analysis.backends.angr.symbolic import (
+     DEFAULT_INPUT_SIZE,
+@@ -66,10 +72,16 @@
+         ) from e
+ 
+     simgr = project.factory.simgr(state)
++    # Create the result stashes up front: if exploration stops before its first
++    # successful step (timeout, or an unsupported instruction raising on step one)
++    # they'd otherwise not exist yet, and reading simgr.found would crash.
++    simgr.populate("found", [])
++    simgr.populate("avoided", [])
+ 
+     start_time = time.time()
+     steps_taken = 0
+     stop_reason = "unknown"
++    pruned = False  # True once states were dropped to respect max_active_states
+ 
+     while simgr.active:
+         if time.time() - start_time > timeout_seconds:
+@@ -102,13 +114,17 @@
+             break
+ 
+         if len(simgr.active) > max_active_states:
+-            simgr.active = simgr.active[:max_active_states]
++            # Assigning simgr.active would only shadow the stash with a plain
++            # attribute (angr keeps stepping every real state) -- trim the
++            # stash itself.
++            simgr.stashes["active"] = simgr.stashes["active"][:max_active_states]
++            pruned = True
+ 
+     if stop_reason == "unknown":
+         if simgr.found:
+             stop_reason = "sink_reached"
+         elif not simgr.active:
+-            stop_reason = "no_active_states"
++            stop_reason = "state_limit_reached" if pruned else "no_active_states"
+ 
+     if not simgr.found:
+         return DataFlowResult(
+@@ -202,4 +218,4 @@
+             "arguments (a bare marker/flag function) will always show "
+             "this result -- there's nothing for it to receive."
+         ),
+-    )
+\ No newline at end of file
++    )
+diff -ruN --strip-trailing-cr a/snikrflow/analysis/backends/angr/functions.py b/snikrflow/analysis/backends/angr/functions.py
+--- a/snikrflow/analysis/backends/angr/functions.py	2026-10-11 06:11:44.803761616 +0000
++++ b/snikrflow/analysis/backends/angr/functions.py	2026-10-11 06:11:44.794043717 +0000
+@@ -17,6 +17,8 @@
+ from snikrflow.core.models import Function, FunctionSource
+ from snikrflow.elf.loader import LoadedBinary
+ 
++_PLT_SECTIONS = (".plt", ".plt.sec", ".plt.got")
++
+ _JNI_PREFIXES = ("Java_",)
+ _JNI_EXACT = ("JNI_OnLoad", "JNI_OnUnload")
+ 
+@@ -29,6 +31,11 @@
+     return name.startswith(_JNI_PREFIXES)
+ 
+ 
++def _in_plt_section(main_obj, addr: int) -> bool:
++    section = main_obj.find_section_containing(addr)
++    return section is not None and section.name in _PLT_SECTIONS
++
++
+ def discover_functions(binary: LoadedBinary) -> list[Function]:
+     project = binary.project
+     main_obj = project.loader.main_object
+@@ -71,6 +78,15 @@
+         is_imported = bool(sym.is_import) if sym else is_simprocedure
+         is_exported = bool(getattr(sym, "is_export", False)) if sym else False
+ 
++        # PLT0 and its alignment padding get discovered by angr as nameless
++        # "functions" inside the PLT. They aren't code the program authored,
++        # and they show up as phantom callers (with no call site) of the
++        # first real PLT stub -- i.e. a bogus extra caller on whichever sink
++        # happens to be the first import. Real stubs are is_plt, so only
++        # drop unnamed, non-stub entries sitting inside a PLT section.
++        if not is_plt and not has_symbol and not is_simprocedure and _in_plt_section(main_obj, addr):
++            continue
++
+         if is_plt:
+             source = FunctionSource.PLT_STUB
+         elif is_imported:
+@@ -96,4 +112,4 @@
+         )
+ 
+     functions.sort(key=lambda f: f.address)
+-    return functions
+\ No newline at end of file
++    return functions
+diff -ruN --strip-trailing-cr a/snikrflow/analysis/backends/angr/sinks.py b/snikrflow/analysis/backends/angr/sinks.py
+--- a/snikrflow/analysis/backends/angr/sinks.py	2026-10-11 06:11:44.803820803 +0000
++++ b/snikrflow/analysis/backends/angr/sinks.py	2026-10-11 06:11:44.794121600 +0000
+@@ -47,7 +47,12 @@
+ 
+         for caller_addr in caller_addrs:
+             caller_func = by_addr.get(caller_addr)
+-            caller_name = caller_func.name if caller_func else f"sub_{caller_addr:x}"
++            if caller_func is None:
++                # Not a function SnikrFlow reports (e.g. a PLT padding
++                # artifact filtered out in discover_functions) -- so not a
++                # real caller either. Don't invent a name for it.
++                continue
++            caller_name = caller_func.name
+ 
+             call_site_addrs: list[int] = []
+             try:
+@@ -57,7 +62,7 @@
+                         target = kb_caller.get_call_target(site)
+                         if target == f.address:
+                             call_site_addrs.append(site)
+-            except Exception:  # noqa: BLE001, S110
++            except Exception:
+                 pass
+ 
+             sink.call_sites.append(
+@@ -71,4 +76,4 @@
+         sinks.append(sink)
+ 
+     sinks.sort(key=lambda s: s.address)
+-    return sinks
+\ No newline at end of file
++    return sinks
+diff -ruN --strip-trailing-cr a/snikrflow/analysis/backends/angr/symbolic.py b/snikrflow/analysis/backends/angr/symbolic.py
+--- a/snikrflow/analysis/backends/angr/symbolic.py	2026-10-11 06:11:44.803839398 +0000
++++ b/snikrflow/analysis/backends/angr/symbolic.py	2026-10-11 06:11:44.794142902 +0000
+@@ -17,7 +17,13 @@
+ import time
+ from typing import Optional
+ 
+-import claripy
++# angr >= 10 bundles its own claripy (angr.claripy); its states only accept
++# expressions built by THAT module, not by a separately installed `claripy`
++# package. angr 9.x uses the standalone package. Use whichever angr uses.
++try:
++    from angr import claripy
++except ImportError:  # angr 9.x
++    import claripy
+ 
+ from snikrflow.core.exceptions import AnalysisIncompleteError
+ from snikrflow.core.models import Confidence, SolverStatus, SymbolicResult
+@@ -64,10 +70,16 @@
+         ) from e
+ 
+     simgr = project.factory.simgr(state)
++    # Create the result stashes up front: if exploration stops before its first
++    # successful step (timeout, or an unsupported instruction raising on step one)
++    # they'd otherwise not exist yet, and reading simgr.found would crash.
++    simgr.populate("found", [])
++    simgr.populate("avoided", [])
+ 
+     start_time = time.time()
+     steps_taken = 0
+     stop_reason = "unknown"
++    pruned = False  # True once states were dropped to respect max_active_states
+ 
+     while simgr.active:
+         if time.time() - start_time > timeout_seconds:
+@@ -102,13 +114,17 @@
+         if len(simgr.active) > max_active_states:
+             # Safety trim, not a hard stop -- keep exploring with a
+             # bounded set of states rather than exploding memory use.
+-            simgr.active = simgr.active[:max_active_states]
++            # Assigning simgr.active would only shadow the stash with a plain
++            # attribute (angr keeps stepping every real state) -- trim the
++            # stash itself.
++            simgr.stashes["active"] = simgr.stashes["active"][:max_active_states]
++            pruned = True
+ 
+     if stop_reason == "unknown":
+         if simgr.found:
+             stop_reason = "target_reached"
+         elif not simgr.active:
+-            stop_reason = "no_active_states"
++            stop_reason = "state_limit_reached" if pruned else "no_active_states"
+ 
+     if not simgr.found:
+         return SymbolicResult(
+@@ -149,4 +165,4 @@
+             "symbolic argument buffer. This is a CANDIDATE input, not a "
+             "confirmed exploit."
+         ),
+-    )
+\ No newline at end of file
++    )
+diff -ruN --strip-trailing-cr a/snikrflow/cli.py b/snikrflow/cli.py
+--- a/snikrflow/cli.py	2026-10-11 06:11:44.803453376 +0000
++++ b/snikrflow/cli.py	2026-10-11 06:11:44.796367853 +0000
+@@ -573,7 +573,7 @@
+                     if lib.audit is not None
+                 ]
+                 write_sarif(entries, sarif)
+-                console.print(f"[dim]SARIF written to {sarif}[/dim]")
++                _stderr_console.print(f"[dim]SARIF written to {sarif}[/dim]")
+             return
+ 
+         loaded = load_binary(binary)
+@@ -589,7 +589,7 @@
+ 
+     if sarif:
+         write_sarif([(result, binary)], sarif)
+-        console.print(f"[dim]SARIF written to {sarif}[/dim]")
++        _stderr_console.print(f"[dim]SARIF written to {sarif}[/dim]")
+ 
+ 
+ @app.command()
+diff -ruN --strip-trailing-cr a/snikrflow/elf/jni.py b/snikrflow/elf/jni.py
+--- a/snikrflow/elf/jni.py	2026-10-11 06:11:44.804336825 +0000
++++ b/snikrflow/elf/jni.py	2026-10-11 06:11:44.795752256 +0000
+@@ -16,7 +16,7 @@
+ 
+ from typing import Optional
+ 
+-_ESCAPED_UNDERSCORE_MARKER = "\x00ESC_USCORE\x00"
++_ESCAPED_UNDERSCORE_MARKER = "\x00ESCUSCORE\x00"
+ 
+ 
+ def demangle_jni_name(name: str) -> tuple[Optional[str], Optional[str]]:
