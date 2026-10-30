@@ -21,18 +21,10 @@ from pathlib import Path
 from snikrflow.core.exceptions import BinaryLoadError, UnsupportedArchitectureError
 from snikrflow.core.models import Architecture, Endianness
 
-# Logging MUST be configured before `import angr` below. angr's package
-# init triggers a submodule (state_plugins.unicorn_engine) that logs its
-# "unicornlib.dll not found" message immediately at import time, so
-# configuring the logger afterward is too late -- the message will
-# already have been emitted by the time we get to it.
-import logging
-
-logging.getLogger("angr").setLevel(logging.CRITICAL)
-logging.getLogger("cle").setLevel(logging.CRITICAL)
-logging.getLogger("angr.state_plugins.unicorn_engine").setLevel(logging.CRITICAL)
-
-# angr import is confined to this module (and the rest of backends/angr/)
+# Logging suppression for angr now lives in snikrflow/__init__.py (it must
+# run before ANY module imports angr, and __init__.py is the only place
+# Python guarantees runs first regardless of which submodule is imported
+# first -- see that file for why).
 import angr
 
 
