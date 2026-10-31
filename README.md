@@ -15,7 +15,9 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue.svg">
 </p>
 
+<p align="centre">
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/snikrflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/snikrflow)
+</p>
 
 <p align="center">
   Built by <b>John Ebinyi Odey</b> at <b>Stodachon</b>
